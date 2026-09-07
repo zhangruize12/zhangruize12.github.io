@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>！？增量？！</title>
+    <style>
+        /* ===== 样式（与之前完全一致，未改动） ===== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0d1117; color: #e6edf3;
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
+            min-height: 100vh; padding: 20px;
+            display: flex; justify-content: center; align-items: flex-start;
+        }
+        .app {
+            max-width: 960px; width: 100%;
+            background: #161b22; border-radius: 24px;
+            padding: 28px 30px 34px;
+            border: 1px solid #30363d;
+        }
+        .register-screen { display: flex; flex-direction: column; align-items: center; padding: 30px 20px 40px; gap: 22px; }
+        .register-screen h1 { font-size: 2.6rem; font-weight: 700; background: linear-gradient(135deg, #f0883e, #f6a85b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .register-screen .sub { color: #8b949e; font-size: 0.95rem; margin-top: -8px; }
+        .user-list { width: 100%; max-width: 480px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 6px 0; }
+        .user-tag {
+            background: #21262d; border-radius: 40px; padding: 6px 16px 6px 20px;
+            display: flex; align-items: center; gap: 10px; font-size: 0.95rem;
+            border: 1px solid #30363d; transition: 0.2s;
+        }
+        .user-tag:hover { border-color: #f0883e; }
+        .user-tag .name { cursor: pointer; }
+        .user-tag .name:hover { color: #f6a85b; }
+        .user-tag .del-btn {
+            background: transparent; border: none; color: #8b949e; cursor: pointer;
+            font-size: 1.1rem; line-height: 1; padding: 0 4px;
+        }
+        .user-tag .del-btn:hover { color: #f0883e; }
+        .register-screen .input-group { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        .register-screen input {
+            background: #0d1117; border: 1px solid #30363d; border-radius: 40px;
+            padding: 14px 24px; font-size: 1.1rem; color: #e6edf3; width: 260px; outline: none;
+        }
+        .register-screen input:focus { border-color: #f0883e; box-shadow: 0 0 0 3px rgba(240, 136, 62, 0.25); }
+        .register-screen button {
+            background: #f0883e; border: none; border-radius: 40px;
+            padding: 14px 36px; font-size: 1.1rem; font-weight: 600;
+            color: #0d1117; cursor: pointer; transition: 0.2s;
+        }
+        .register-screen button:hover { background: #f6a85b; transform: scale(1.02); }
+        .register-screen .hint { color: #484f58; font-size: 0.8rem; margin-top: -6px; }
+
+        .game-screen { display: none; flex-direction: column; gap: 18px; }
+        .game-screen.active { display: flex; }
+        .topbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 12px; border-bottom: 1px solid #30363d;
+        }
+        .topbar .user { display: flex; align-items: center; gap: 12px; font-size: 1.15rem; }
+        .topbar .user .avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: #f0883e; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 1.2rem; color: #0d1117;
+        }
+        .topbar .logout-btn {
+            background: transparent; border: 1px solid #30363d; border-radius: 30px;
+            padding: 6px 18px; color: #8b949e; cursor: pointer;
+        }
+        .topbar .logout-btn:hover { border-color: #f0883e; color: #f0883e; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+            gap: 14px; background: #0d1117; border-radius: 16px;
+            padding: 18px 20px; border: 1px solid #30363d;
+        }
+        .stat-item .label { font-size: 0.7rem; color: #8b949e; text-transform: uppercase; }
+        .stat-item .value { font-size: 1.3rem; font-weight: 600; }
+        .stat-item .value.gold { color: #f6a85b; }
+        .stat-item .value.green { color: #7ee787; }
+        .stat-item .value.cyan { color: #79c0ff; }
+        .stat-item .value.purple { color: #d2a8ff; }
+        .stat-item .value.orange { color: #f0883e; }
+
+        .section-title { font-size: 1.2rem; font-weight: 600; margin: 8px 0 4px; display: flex; align-items: center; gap: 10px; }
+        .section-title small { font-weight: 400; font-size: 0.8rem; color: #8b949e; }
+
+        .table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid #30363d; background: #0d1117; margin-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.92rem; min-width: 600px; }
+        th { text-align: left; padding: 12px 14px; background: #161b22; color: #8b949e; font-weight: 500; font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid #30363d; }
+        td { padding: 10px 14px; border-bottom: 1px solid #21262d; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        .factor-name { font-weight: 500; display: flex; align-items: center; gap: 6px; }
+        .factor-name .badge { font-size: 0.6rem; background: #30363d; padding: 2px 8px; border-radius: 30px; color: #8b949e; }
+        .factor-name .badge.unlocked { background: #1f3a2a; color: #7ee787; }
+        .factor-name .badge.locked { background: #3d1f1f; color: #f0883e; }
+        .factor-mult, .factor-invest { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+        .action-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .action-cell input { width: 80px; background: #0d1117; border: 1px solid #30363d; border-radius: 30px; padding: 6px 12px; color: #e6edf3; font-size: 0.85rem; outline: none; }
+        .action-cell input:focus { border-color: #f0883e; }
+        .action-cell input::placeholder { color: #484f58; font-size: 0.7rem; }
+        .btn { border: none; border-radius: 30px; padding: 6px 16px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .btn-primary { background: #f0883e; color: #0d1117; }
+        .btn-primary:hover { background: #f6a85b; }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-unlock { background: #1f6f3a; color: #e6edf3; }
+        .btn-unlock:hover { background: #2d8f4a; }
+        .btn-unlock:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-reset { background: #a83e3e; color: #e6edf3; padding: 10px 28px; font-size: 1rem; border-radius: 40px; }
+        .btn-reset:hover { background: #c44a4a; }
+        .btn-reset:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-upgrade { background: #1f6f3a; color: #e6edf3; padding: 10px 28px; font-size: 1rem; border-radius: 40px; }
+        .btn-upgrade:hover { background: #2d8f4a; }
+        .btn-upgrade:disabled { opacity: 0.4; cursor: not-allowed; }
+        .upgrade-area {
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+            gap: 14px; background: #0d1117; border-radius: 16px;
+            padding: 14px 20px; border: 1px solid #30363d; margin-top: 4px;
+        }
+        .upgrade-area .info .cost { color: #8b949e; font-size: 0.9rem; }
+        .upgrade-area .info .cost strong { color: #f6a85b; }
+        .reset-area {
+            display: flex; align-items: center; justify-content: flex-end; gap: 20px;
+            background: #0d1117; border-radius: 16px; padding: 10px 20px; border: 1px solid #30363d;
+            margin-top: 4px;
+        }
+        .reset-area .info { color: #8b949e; font-size: 0.9rem; }
+        .reset-area .info strong { color: #f0883e; }
+        .empty-tip { color: #484f58; text-align: center; padding: 30px 10px; font-size: 0.95rem; }
+
+        @media (max-width: 700px) { .app { padding: 16px 14px; } .stats-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 480px) { .user-tag { font-size: 0.8rem; padding: 4px 12px; } }
+    </style>
+</head>
+<body>
+    <div class="app" id="app">
+        <!-- ===== 注册界面 ===== -->
+        <div class="register-screen" id="registerScreen">
+            <h1>我是增量游戏</h1>
+            <p class="sub">选择已有用户或创建新账号</p>
+            <div class="user-list" id="userList"></div>
+            <div class="input-group">
+                <input type="text" id="usernameInput" placeholder="输入用户名..." maxlength="20" autofocus />
+                <button id="registerBtn">开始 / 切换</button>
+            </div>
+            <div class="hint">无需密码 · 数据保存在本地</div>
+            <div class="hint">更新历史 请移步仓库 https://github.com/zhangruize12/zhangruize12.github.io</div>
+        </div>
+
+        <!-- ===== 游戏主界面 ===== -->
+        <div class="game-screen" id="gameScreen">
+            <div class="topbar">
+                <div class="user">
+                    <div class="avatar" id="avatarLetter">U</div>
+                    <span id="displayUsername">用户</span>
+                </div>
+                <button class="logout-btn" id="logoutBtn">🚪 切换账号</button>
+            </div>
+
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-item"><span class="label">等级</span><span class="value cyan" id="levelDisplay">0</span></div>
+                <div class="stat-item"><span class="label">幂指数</span><span class="value" id="powerDisplay">1.00</span></div>
+                <div class="stat-item"><span class="label">阶段1倍率</span><span class="value gold" id="phase1MultDisplay">1.00</span></div>
+                <div class="stat-item"><span class="label">阶段2倍率</span><span class="value orange" id="phase2MultDisplay">1.00</span></div>
+                <div class="stat-item"><span class="label">因素点</span><span class="value gold" id="pointsDisplay">0</span></div>
+                <div class="stat-item"><span class="label">反物质</span><span class="value purple" id="antimatterDisplay">0</span></div>
+                <div class="stat-item"><span class="label">每秒获取因素点</span><span class="value green" id="perSecDisplay">1.00</span></div>
+                <div class="stat-item"><span class="label">每秒获取反物质</span><span class="value green" id="perSecDisplay2">1.00</span></div>
+                <div class="stat-item"><span class="label">游玩时长</span><span class="value purple" id="timeDisplay">00:00:00</span></div>
+            </div>
+
+            <!-- 阶段1因子表格 -->
+            <div class="section-title">阶段1因子</div>
+            <div class="table-wrap">
+                <table>
+                    <thead id="phase1Thead">
+                        <tr>
+                            <th style="width:12%;">因子</th>
+                            <th style="width:18%;">单因素点倍率</th>
+                            <th style="width:18%;">已投入</th>
+                            <th id="phase1ExtraTh" style="display:none; width:18%;">反物质倍率</th>
+                            <th style="width:34%;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="phase1TableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- 阶段2因子表格（初始隐藏） -->
+            <div id="phase2Section" style="display:none;">
+                <div class="section-title">阶段2因子</div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th style="width:15%;">因子</th><th style="width:22%;">单反物质倍率</th><th style="width:22%;">已投入</th><th style="width:41%;">操作</th></tr></thead>
+                        <tbody id="phase2TableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 升级与重置 -->
+            <div class="upgrade-area">
+                <div class="info">
+                    <span style="font-weight:600;">升级</span>
+                    <span class="cost">需要 <strong id="upgradeCostDisplay">10</strong> 因素点</span>
+                    <span style="color:#484f58;font-size:0.8rem;" id="upgradeNextInfo">下一级: 1 → 幂指数 1.10</span>
+                </div>
+                <button class="btn btn-upgrade" id="upgradeBtn">升级</button>
+            </div>
+
+            <!-- 重置区域（仅当第二阶段未解锁时显示） -->
+            <div class="reset-area" id="resetArea">
+                <span class="info">重置可获反物质: <strong id="resetGainDisplay">0.00</strong> (需要因素点 ≥ 1e10 且 gain > 1)</span>
+                <button class="btn btn-reset" id="resetBtn" disabled>🔄 重置并进入阶段2</button>
+            </div>
+
+            <div style="text-align:center;color:#484f58;font-size:0.7rem;margin-top:12px;border-top:1px solid #21262d;padding-top:14px;">
+                数据自动保存 · 关闭页面后进度保留
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        // ---------- 工具函数 ----------
+        const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71];
+        function getPrime(index) {
+            if (index <= PRIMES.length) return PRIMES[index - 1];
+            let last = PRIMES[PRIMES.length - 1], count = PRIMES.length;
+            while (count < index) {
+                last += 2; let isPrime = true;
+                for (let p of PRIMES) { if (p * p > last) break; if (last % p === 0) { isPrime = false; break; } }
+                if (isPrime) { PRIMES.push(last); count++; }
+            }
+            return PRIMES[index - 1];
+        }
+        function formatNum(n) {
+            if (!isFinite(n)) return '∞';
+            if (n === 0) return '0';
+            const abs = Math.abs(n);
+            if (abs < 1e-6) return n.toExponential(4);
+            if (abs < 1e4) return n.toFixed(4);
+            if (abs < 1e6) return n.toFixed(2);
+            return n.toExponential(4);
+        }
+        function parseNumInput(str) {
+            str = str.trim().replace(/,/g, '');
+            if (str === '') return NaN;
+            return Number(str);
+        }
+        function formatDuration(seconds) {
+            if (!seconds || seconds < 0) seconds = 0;
+            seconds = Math.floor(seconds);
+            const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+            const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        // ---------- 常量 ----------
+        const MAX_FACTORS = 15;
+        const STORAGE_KEY = 'factorMasterUsers';
+        const PHASE2_UNLOCK_THRESHOLD = 1e10;
+
+        // ---------- 用户数据管理 ----------
+        function getDefaultUserData(username) {
+            return {
+                username: username,
+                level: 0,
+                points: 0,
+                antimatter: 0,
+                phase2Unlocked: false,
+                factors: Array.from({ length: MAX_FACTORS }, (_, i) => ({
+                    id: i + 1,
+                    unlocked: i === 0,
+                    invested: 0,
+                })),
+                phase2Factors: Array.from({ length: MAX_FACTORS }, (_, i) => ({
+                    id: i + 1,
+                    unlocked: i === 0,
+                    invested: 0,
+                })),
+                lastSave: Date.now(),
+                totalSeconds: 0,
+            };
+        }
+
+        function loadAllUsers() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const obj = JSON.parse(raw);
+                    if (typeof obj === 'object' && obj !== null) {
+                        for (const [name, data] of Object.entries(obj)) {
+                            if (!data.factors || !Array.isArray(data.factors)) {
+                                obj[name] = getDefaultUserData(name);
+                                continue;
+                            }
+                            while (data.factors.length < MAX_FACTORS) {
+                                const nextId = data.factors.length + 1;
+                                data.factors.push({ id: nextId, unlocked: nextId === 1, invested: 0 });
+                            }
+                            data.factors.forEach((f, idx) => {
+                                if (!f.id) f.id = idx + 1;
+                                if (f.unlocked === undefined) f.unlocked = (idx === 0);
+                                if (f.invested === undefined) f.invested = 0;
+                            });
+                            if (data.level === undefined) data.level = 0;
+                            if (data.points === undefined) data.points = 0;
+                            if (data.antimatter === undefined) data.antimatter = 0;
+                            if (data.phase2Unlocked === undefined) data.phase2Unlocked = false;
+                            if (!data.phase2Factors || !Array.isArray(data.phase2Factors)) {
+                                data.phase2Factors = Array.from({ length: MAX_FACTORS }, (_, i) => ({
+                                    id: i + 1,
+                                    unlocked: i === 0,
+                                    invested: 0,
+                                }));
+                            }
+                            while (data.phase2Factors.length < MAX_FACTORS) {
+                                const nextId = data.phase2Factors.length + 1;
+                                data.phase2Factors.push({ id: nextId, unlocked: nextId === 1, invested: 0 });
+                            }
+                            data.phase2Factors.forEach((f, idx) => {
+                                if (!f.id) f.id = idx + 1;
+                                if (f.unlocked === undefined) f.unlocked = (idx === 0);
+                                if (f.invested === undefined) f.invested = 0;
+                            });
+                            if (data.lastSave === undefined) data.lastSave = Date.now();
+                            if (data.totalSeconds === undefined) data.totalSeconds = 0;
+                        }
+                        return obj;
+                    }
+                }
+            } catch (e) { /* ignore */ }
+            return {};
+        }
+
+        function saveAllUsers(usersObj) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(usersObj));
+            } catch (e) { /* ignore */ }
+        }
+
+        function getUserData(username) {
+            const all = loadAllUsers();
+            return all[username] || null;
+        }
+
+        function saveUserData(username, data) {
+            const all = loadAllUsers();
+            all[username] = data;
+            saveAllUsers(all);
+        }
+
+        function deleteUserData(username) {
+            const all = loadAllUsers();
+            delete all[username];
+            saveAllUsers(all);
+        }
+
+        function getAllUsernames() {
+            const all = loadAllUsers();
+            return Object.keys(all);
+        }
+
+        // ---------- 当前游戏状态 ----------
+        let currentUser = null;
+        let state = null;
+        let gameLoopInterval = null;
+        let saveInterval = null;
+
+        // ---------- 核心计算 ----------
+        function getFactorMultiplier(factorId, invested) {
+            if (invested <= 0) return 1;
+            const a = factorId;
+            const p = getPrime(a);
+            const val = invested * Math.pow(10, -a + 1);
+            if (val <= 1) return 1;
+            const mult = Math.log(val) / Math.log(p);
+            return Math.max(1, mult);
+        }
+
+        // 第1阶段因素点倍率（不含等级幂）
+        function getPhase1BaseMultiplier() {
+            let total = 1;
+            for (const f of state.factors) {
+                if (!f.unlocked) continue;
+                total *= getFactorMultiplier(f.id, f.invested);
+            }
+            return total;
+        }
+
+        // 第1阶段最终倍率（含等级幂）
+        function getPhase1FinalMultiplier() {
+            return Math.pow(getPhase1BaseMultiplier(), 1 + 0.1 * state.level);
+        }
+
+        // 第2阶段因子倍率（仅第2阶段自身因子）
+        function getPhase2FactorMultiplier() {
+            let total = 1;
+            for (const f of state.phase2Factors) {
+                if (!f.unlocked) continue;
+                total *= getFactorMultiplier(f.id, f.invested);
+            }
+            return total;
+        }
+
+        // 第1阶段因子提供的反物质倍率（仅当 phase2Unlocked 时有效）
+        function getPhase1AntimatterMultiplier() {
+            if (!state.phase2Unlocked) return 1;
+            let total = 1;
+            for (const f of state.factors) {
+                if (!f.unlocked) continue;
+                const invested = f.invested;
+                if (invested <= 0) continue;
+                const a = f.id;
+                const p = getPrime(a);
+                const val = invested / Math.pow(10, 2 * a);
+                if (val <= 1) continue;
+                const mult = Math.log(val) / Math.log(p);
+                if (mult > 1) total *= mult;
+            }
+            return total;
+        }
+
+        // 第2阶段总倍率 = 阶段2因子倍率 * 阶段1反物质倍率
+        function getPhase2TotalMultiplier() {
+            return getPhase2FactorMultiplier() * getPhase1AntimatterMultiplier();
+        }
+
+        // 最终每秒因素点 = 阶段1最终倍率 * 阶段2总倍率
+        function getPointsPerSecond() {
+            return getPhase1FinalMultiplier() * getPhase2TotalMultiplier();
+        }
+
+        // 每秒反物质产出 = 阶段2总倍率（当阶段2解锁时）
+        function getAntimatterPerSecond() {
+            if (!state.phase2Unlocked) return 0;
+            return getPhase2TotalMultiplier() * (1 + 0.1 * state.level);
+        }
+
+        function getUpgradeCost() {
+            const m = state.level;
+            const exp = Math.pow(2, m);
+            if (exp > 308) return Infinity;
+            return Math.pow(10, exp);
+        }
+        function getUnlockCost(factorId) { return Math.pow(20, factorId); }
+
+        // ---------- 游戏操作（投入整数） ----------
+        function investPoints(factorId, amount) {
+            amount = Math.floor(amount);
+            if (amount <= 0) return false;
+            const f = state.factors.find(f => f.id === factorId);
+            if (!f || !f.unlocked || state.points < amount) return false;
+            state.points -= amount;
+            f.invested += amount;
+            return true;
+        }
+
+        function investAntimatter(factorId, amount) {
+            amount = Math.floor(amount);
+            if (amount <= 0) return false;
+            const f = state.phase2Factors.find(f => f.id === factorId);
+            if (!f || !f.unlocked || state.antimatter < amount) return false;
+            state.antimatter -= amount;
+            f.invested += amount;
+            return true;
+        }
+
+        function unlockFactor(factorId) {
+            const f = state.factors.find(f => f.id === factorId);
+            if (!f || f.unlocked) return false;
+            const idx = f.id - 1;
+            if (idx > 0 && !state.factors[idx - 1].unlocked) return false;
+            const cost = getUnlockCost(factorId);
+            if (state.points < cost) return false;
+            state.points -= cost;
+            f.unlocked = true;
+            return true;
+        }
+
+        function unlockPhase2Factor(factorId) {
+            const f = state.phase2Factors.find(f => f.id === factorId);
+            if (!f || f.unlocked) return false;
+            const idx = f.id - 1;
+            if (idx > 0 && !state.phase2Factors[idx - 1].unlocked) return false;
+            const cost = getUnlockCost(factorId);
+            if (state.antimatter < cost) return false;
+            state.antimatter -= cost;
+            f.unlocked = true;
+            return true;
+        }
+
+        function upgradeLevel() {
+            const cost = getUpgradeCost();
+            if (!isFinite(cost) || state.points < cost) return false;
+            state.points -= cost;
+            state.level += 1;
+            return true;
+        }
+
+        // ---------- 重置：仅清空阶段1的点和因子，保留等级，解锁阶段2 ----------
+        function resetPhase1() {
+            if (state.phase2Unlocked) return false; // 已解锁则不能再重置
+            const points = state.points;
+            if (points < PHASE2_UNLOCK_THRESHOLD) return false;
+            const gain = Math.sqrt(points / 1e10) / 100;
+            if (gain <= 1) return false; // 必须大于1才能重置
+            // 清空第1阶段因素点和因子投入，但保留等级
+            state.points = 0;
+            state.factors = Array.from({ length: MAX_FACTORS }, (_, i) => ({
+                id: i + 1,
+                unlocked: i === 0,
+                invested: 0,
+            }));
+            // 标记解锁第2阶段（反物质开始持续产出）
+            state.phase2Unlocked = true;
+            // 注意：不增加反物质，由后续循环产生
+            return true;
+        }
+
+        // ---------- 离线时长 ----------
+        function applyOfflineTime() {
+            if (!state) return;
+            const now = Date.now();
+            const elapsed = (now - state.lastSave) / 1000;
+            if (elapsed > 1) {
+                const pps = getPointsPerSecond();
+                state.points += pps * elapsed;
+                // 反物质持续产出
+                const amPerSec = getAntimatterPerSecond();
+                state.antimatter += amPerSec * elapsed;
+                state.totalSeconds += elapsed;
+            }
+            state.lastSave = now;
+        }
+
+        // ---------- 增量渲染 ----------
+        function renderStats() {
+            if (!state) return;
+            document.getElementById('levelDisplay').textContent = state.level;
+            document.getElementById('powerDisplay').textContent = (1 + 0.1 * state.level).toFixed(4);
+            document.getElementById('phase1MultDisplay').textContent = formatNum(getPhase1FinalMultiplier());
+            document.getElementById('phase2MultDisplay').textContent = formatNum(getPhase2TotalMultiplier());
+            document.getElementById('pointsDisplay').textContent = formatNum(state.points);
+            document.getElementById('antimatterDisplay').textContent = formatNum(state.antimatter);
+            document.getElementById('perSecDisplay').textContent = formatNum(getPointsPerSecond());
+            document.getElementById('perSecDisplay2').textContent = formatNum(getAntimatterPerSecond());
+            document.getElementById('timeDisplay').textContent = formatDuration(state.totalSeconds || 0);
+
+            const cost = getUpgradeCost();
+            document.getElementById('upgradeCostDisplay').textContent = isFinite(cost) ? formatNum(cost) : '∞';
+            const nextPower = 1 + 0.1 * (state.level + 1);
+            document.getElementById('upgradeNextInfo').textContent =
+                `下一级: ${state.level} → ${state.level+1}  ·  幂指数 ${nextPower.toFixed(4)}`;
+            document.getElementById('upgradeBtn').disabled = !isFinite(cost) || state.points < cost;
+
+            // 重置区域：如果已解锁第二阶段则隐藏
+            const resetArea = document.getElementById('resetArea');
+            if (state.phase2Unlocked) {
+                resetArea.style.display = 'none';
+            } else {
+                resetArea.style.display = 'flex';
+                const canReset = state.points >= PHASE2_UNLOCK_THRESHOLD;
+                const gain = canReset ? Math.sqrt(state.points / 1e10) / 100 : 0;
+                document.getElementById('resetGainDisplay').textContent = formatNum(gain);
+                const resetBtn = document.getElementById('resetBtn');
+                resetBtn.disabled = !(canReset && gain > 1);
+            }
+        }
+
+        // ----- 渲染阶段1因子表格（含反物质倍率列） -----
+        function renderPhase1Factors() {
+            const tbody = document.getElementById('phase1TableBody');
+            if (!state) return;
+
+            const firstLockedIdx = state.factors.findIndex(f => !f.unlocked);
+            const count = (firstLockedIdx === -1) ? state.factors.length : firstLockedIdx + 1;
+            const factorsToShow = state.factors.slice(0, count);
+
+            ensureRows(tbody, factorsToShow.length, 'phase1');
+
+            const rows = tbody.children;
+            for (let i = 0; i < factorsToShow.length; i++) {
+                const row = rows[i];
+                const f = factorsToShow[i];
+                updatePhase1Row(row, f);
+            }
+
+            const th = document.getElementById('phase1ExtraTh');
+            if (state.phase2Unlocked) {
+                th.style.display = 'table-cell';
+            } else {
+                th.style.display = 'none';
+            }
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const extraCell = row.querySelector('.antimatter-mult');
+                if (extraCell) {
+                    extraCell.style.display = state.phase2Unlocked ? 'table-cell' : 'none';
+                }
+            }
+        }
+
+        function ensureRows(tbody, targetCount, prefix) {
+            while (tbody.children.length > targetCount) {
+                tbody.removeChild(tbody.lastChild);
+            }
+            while (tbody.children.length < targetCount) {
+                const idx = tbody.children.length;
+                const row = document.createElement('tr');
+                row.id = `${prefix}-row-${idx+1}`;
+                let cols = `
+                    <td class="factor-name-cell"></td>
+                    <td class="factor-mult"></td>
+                    <td class="factor-invest"></td>
+                `;
+                if (prefix === 'phase1') {
+                    cols += `<td class="antimatter-mult" style="display:none;"></td>`;
+                }
+                cols += `<td class="action-cell"></td>`;
+                row.innerHTML = cols;
+                tbody.appendChild(row);
+            }
+        }
+
+        function updatePhase1Row(row, f) {
+            const id = f.id;
+            const unlocked = f.unlocked;
+            const invested = f.invested;
+            const mult = unlocked ? getFactorMultiplier(id, invested) : 1;
+
+            const nameCell = row.querySelector('.factor-name-cell');
+            let nameHtml = `<span class="factor-name">因子${id}`;
+            if (unlocked) {
+                nameHtml += ` <span class="badge unlocked">✓</span>`;
+            } else {
+                nameHtml += ` <span class="badge locked">🔒</span>`;
+            }
+            nameHtml += `</span>`;
+            nameCell.innerHTML = nameHtml;
+
+            row.querySelector('.factor-mult').textContent = formatNum(mult);
+            row.querySelector('.factor-invest').textContent = formatNum(invested);
+
+            const extraCell = row.querySelector('.antimatter-mult');
+            if (extraCell) {
+                if (state.phase2Unlocked && unlocked && invested > 0) {
+                    const a = id;
+                    const p = getPrime(a);
+                    const val = invested / Math.pow(10, 2 * a);
+                    let am = 1;
+                    if (val > 1) {
+                        am = Math.log(val) / Math.log(p);
+                        if (am < 1) am = 1;
+                    }
+                    extraCell.textContent = formatNum(am);
+                    extraCell.style.display = 'table-cell';
+                } else {
+                    extraCell.textContent = '1.00';
+                    extraCell.style.display = state.phase2Unlocked ? 'table-cell' : 'none';
+                }
+            }
+
+            const actionCell = row.querySelector('.action-cell');
+            if (unlocked) {
+                const oldUnlock = actionCell.querySelector('.unlock-btn');
+                if (oldUnlock) oldUnlock.remove();
+
+                let input = actionCell.querySelector('.invest-input');
+                let btn = actionCell.querySelector('.invest-btn');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'number';
+                    input.className = 'invest-input';
+                    input.placeholder = '整数';
+                    input.step = '1';
+                    input.min = '1';
+                    input.dataset.factor = id;
+                    input.dataset.phase = '1';
+                    actionCell.appendChild(input);
+                }
+                if (!btn) {
+                    btn = document.createElement('button');
+                    btn.className = 'btn btn-primary invest-btn';
+                    btn.dataset.factor = id;
+                    btn.dataset.phase = '1';
+                    btn.textContent = '投入';
+                    actionCell.appendChild(btn);
+                }
+                btn.disabled = state.points <= 0;
+            } else {
+                const oldInput = actionCell.querySelector('.invest-input');
+                const oldBtn = actionCell.querySelector('.invest-btn');
+                if (oldInput) oldInput.remove();
+                if (oldBtn) oldBtn.remove();
+
+                let unlockBtn = actionCell.querySelector('.unlock-btn');
+                if (!unlockBtn) {
+                    unlockBtn = document.createElement('button');
+                    unlockBtn.className = 'btn btn-unlock unlock-btn';
+                    unlockBtn.dataset.factor = id;
+                    unlockBtn.dataset.phase = '1';
+                    actionCell.appendChild(unlockBtn);
+                }
+                const cost = getUnlockCost(id);
+                const canAfford = state.points >= cost;
+                unlockBtn.textContent = `🔓 解锁 (${formatNum(cost)})`;
+                unlockBtn.disabled = !canAfford;
+            }
+        }
+
+        // ----- 渲染阶段2因子表格 -----
+        function renderPhase2Factors() {
+            const tbody = document.getElementById('phase2TableBody');
+            if (!state) return;
+
+            const firstLockedIdx = state.phase2Factors.findIndex(f => !f.unlocked);
+            const count = (firstLockedIdx === -1) ? state.phase2Factors.length : firstLockedIdx + 1;
+            const factorsToShow = state.phase2Factors.slice(0, count);
+
+            ensureRows(tbody, factorsToShow.length, 'phase2');
+
+            const rows = tbody.children;
+            for (let i = 0; i < factorsToShow.length; i++) {
+                const row = rows[i];
+                const f = factorsToShow[i];
+                updatePhase2Row(row, f);
+            }
+        }
+
+        function updatePhase2Row(row, f) {
+            const id = f.id;
+            const unlocked = f.unlocked;
+            const invested = f.invested;
+            const mult = unlocked ? getFactorMultiplier(id, invested) : 1;
+
+            const nameCell = row.querySelector('.factor-name-cell');
+            let nameHtml = `<span class="factor-name">因子${id}`;
+            if (unlocked) {
+                nameHtml += ` <span class="badge unlocked">✓</span>`;
+            } else {
+                nameHtml += ` <span class="badge locked">🔒</span>`;
+            }
+            nameHtml += `</span>`;
+            nameCell.innerHTML = nameHtml;
+
+            row.querySelector('.factor-mult').textContent = formatNum(mult);
+            row.querySelector('.factor-invest').textContent = formatNum(invested);
+
+            const actionCell = row.querySelector('.action-cell');
+            if (unlocked) {
+                const oldUnlock = actionCell.querySelector('.unlock-btn');
+                if (oldUnlock) oldUnlock.remove();
+
+                let input = actionCell.querySelector('.invest-input');
+                let btn = actionCell.querySelector('.invest-btn');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'number';
+                    input.className = 'invest-input';
+                    input.placeholder = '整数';
+                    input.step = '1';
+                    input.min = '1';
+                    input.dataset.factor = id;
+                    input.dataset.phase = '2';
+                    actionCell.appendChild(input);
+                }
+                if (!btn) {
+                    btn = document.createElement('button');
+                    btn.className = 'btn btn-primary invest-btn';
+                    btn.dataset.factor = id;
+                    btn.dataset.phase = '2';
+                    btn.textContent = '投入';
+                    actionCell.appendChild(btn);
+                }
+                btn.disabled = state.antimatter <= 0;
+            } else {
+                const oldInput = actionCell.querySelector('.invest-input');
+                const oldBtn = actionCell.querySelector('.invest-btn');
+                if (oldInput) oldInput.remove();
+                if (oldBtn) oldBtn.remove();
+
+                let unlockBtn = actionCell.querySelector('.unlock-btn');
+                if (!unlockBtn) {
+                    unlockBtn = document.createElement('button');
+                    unlockBtn.className = 'btn btn-unlock unlock-btn';
+                    unlockBtn.dataset.factor = id;
+                    unlockBtn.dataset.phase = '2';
+                    actionCell.appendChild(unlockBtn);
+                }
+                const cost = getUnlockCost(id);
+                const canAfford = state.antimatter >= cost;
+                unlockBtn.textContent = `🔓 解锁 (${formatNum(cost)})`;
+                unlockBtn.disabled = !canAfford;
+            }
+        }
+
+        // ---------- 全量渲染 ----------
+        function renderAll() {
+            if (!state) return;
+            renderStats();
+            renderPhase1Factors();
+            if (state.phase2Unlocked) {
+                document.getElementById('phase2Section').style.display = 'block';
+                renderPhase2Factors();
+            } else {
+                document.getElementById('phase2Section').style.display = 'none';
+            }
+            document.getElementById('displayUsername').textContent = currentUser || '玩家';
+            document.getElementById('avatarLetter').textContent = (currentUser || 'U')[0].toUpperCase();
+            saveUserData(currentUser, state);
+        }
+
+        // ---------- 事件委托 ----------
+        function setupEventDelegation() {
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.invest-btn');
+                if (btn) {
+                    const phase = btn.dataset.phase;
+                    const factorId = parseInt(btn.dataset.factor);
+                    const row = btn.closest('tr');
+                    const input = row.querySelector('.invest-input');
+                    if (!input) return;
+                    const raw = input.value.trim();
+                    if (raw === '') return;
+                    const amount = parseNumInput(raw);
+                    if (isNaN(amount) || amount < 1) {
+                        alert('请输入正整数');
+                        return;
+                    }
+                    let success = false;
+                    if (phase === '1') {
+                        success = investPoints(factorId, amount);
+                    } else if (phase === '2') {
+                        success = investAntimatter(factorId, amount);
+                    }
+                    if (success) {
+                        input.value = '';
+                        renderAll();
+                    } else {
+                        btn.style.opacity = '0.6';
+                        setTimeout(() => btn.style.opacity = '1', 300);
+                    }
+                }
+
+                const unlockBtn = e.target.closest('.unlock-btn');
+                if (unlockBtn) {
+                    const phase = unlockBtn.dataset.phase;
+                    const factorId = parseInt(unlockBtn.dataset.factor);
+                    let success = false;
+                    if (phase === '1') {
+                        success = unlockFactor(factorId);
+                    } else if (phase === '2') {
+                        success = unlockPhase2Factor(factorId);
+                    }
+                    if (success) {
+                        renderAll();
+                    } else {
+                        unlockBtn.style.opacity = '0.5';
+                        setTimeout(() => unlockBtn.style.opacity = '1', 300);
+                    }
+                }
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const input = e.target.closest('.invest-input');
+                    if (input) {
+                        const row = input.closest('tr');
+                        const btn = row.querySelector('.invest-btn');
+                        if (btn) btn.click();
+                    }
+                }
+            });
+        }
+
+        // ---------- 游戏循环 ----------
+        function gameLoop() {
+            if (!state) return;
+            const pps = getPointsPerSecond();
+            state.points += pps;
+            // 反物质持续产出
+            const amPerSec = getAntimatterPerSecond();
+            state.antimatter += amPerSec;
+            state.totalSeconds = (state.totalSeconds || 0) + 1;
+            renderAll();
+        }
+
+        // ---------- 登录 / 登出 ----------
+        function loginUser(username) {
+            if (!username || username.trim() === '') { alert('请输入用户名'); return; }
+            username = username.trim().slice(0, 20);
+
+            const all = loadAllUsers();
+            let userData = all[username];
+            if (!userData) {
+                userData = getDefaultUserData(username);
+                all[username] = userData;
+                saveAllUsers(all);
+            }
+            currentUser = username;
+            state = userData;
+            applyOfflineTime();
+            saveUserData(username, state);
+
+            document.getElementById('registerScreen').style.display = 'none';
+            document.getElementById('gameScreen').classList.add('active');
+
+            renderAll();
+
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            gameLoopInterval = setInterval(gameLoop, 1000);
+            if (saveInterval) clearInterval(saveInterval);
+            saveInterval = setInterval(() => {
+                if (state) saveUserData(currentUser, state);
+            }, 5000);
+        }
+
+        function logout() {
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            if (saveInterval) clearInterval(saveInterval);
+            gameLoopInterval = null;
+            saveInterval = null;
+            if (state && currentUser) {
+                saveUserData(currentUser, state);
+            }
+            currentUser = null;
+            state = null;
+            document.getElementById('gameScreen').classList.remove('active');
+            document.getElementById('registerScreen').style.display = 'flex';
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('usernameInput').focus();
+            renderUserList();
+        }
+
+        // ---------- 用户列表 ----------
+        function renderUserList() {
+            const container = document.getElementById('userList');
+            const users = getAllUsernames();
+            if (users.length === 0) {
+                container.innerHTML = '<span style="color:#484f58;font-size:0.9rem;">暂无用户，创建第一个吧 🚀</span>';
+                return;
+            }
+            let html = '';
+            for (const name of users) {
+                html += `
+                    <div class="user-tag">
+                        <span class="name" data-username="${name}">${name}</span>
+                        <button class="del-btn" data-username="${name}" title="删除用户">✕</button>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+
+            container.querySelectorAll('.name').forEach(el => {
+                el.addEventListener('click', function() {
+                    const uname = this.dataset.username;
+                    if (currentUser) {
+                        logout();
+                        setTimeout(() => loginUser(uname), 50);
+                    } else {
+                        loginUser(uname);
+                    }
+                });
+            });
+
+            container.querySelectorAll('.del-btn').forEach(el => {
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const uname = this.dataset.username;
+                    if (currentUser === uname) {
+                        alert('不能删除当前登录的用户，请先切换账号。');
+                        return;
+                    }
+                    if (confirm(`确定要删除用户 “${uname}” 吗？此操作不可恢复！`)) {
+                        deleteUserData(uname);
+                        renderUserList();
+                    }
+                });
+            });
+        }
+
+        // ---------- 初始化 ----------
+        function init() {
+            document.getElementById('registerBtn').addEventListener('click', function() {
+                const inp = document.getElementById('usernameInput');
+                const name = inp.value.trim();
+                if (!name) { alert('请输入用户名'); return; }
+                if (currentUser) logout();
+                loginUser(name);
+            });
+            document.getElementById('usernameInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') document.getElementById('registerBtn').click();
+            });
+
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+
+            document.getElementById('upgradeBtn').addEventListener('click', function() {
+                if (upgradeLevel()) renderAll();
+                else { this.style.opacity = '0.5'; setTimeout(() => this.style.opacity = '1', 300); }
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                if (resetPhase1()) {
+                    renderAll();
+                } else {
+                    this.style.opacity = '0.5';
+                    setTimeout(() => this.style.opacity = '1', 300);
+                }
+            });
+
+            setupEventDelegation();
+            renderUserList();
+
+            const users = getAllUsernames();
+            if (users.length === 1) {
+                loginUser(users[0]);
+            } else {
+                document.getElementById('registerScreen').style.display = 'flex';
+                document.getElementById('gameScreen').classList.remove('active');
+                document.getElementById('usernameInput').focus();
+            }
+
+            window.addEventListener('beforeunload', function() {
+                if (state && currentUser) {
+                    saveUserData(currentUser, state);
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
