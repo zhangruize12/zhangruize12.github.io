@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>因素大师 · 多用户增量游戏</title>
+    <style>
+        /* ===== 全局样式 ===== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0d1117; color: #e6edf3;
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
+            min-height: 100vh; padding: 20px;
+            display: flex; justify-content: center; align-items: flex-start;
+        }
+        .app {
+            max-width: 960px; width: 100%;
+            background: #161b22; border-radius: 24px;
+            padding: 28px 30px 34px;
+            border: 1px solid #30363d;
+        }
+        .register-screen { display: flex; flex-direction: column; align-items: center; padding: 30px 20px 40px; gap: 22px; }
+        .register-screen h1 { font-size: 2.6rem; font-weight: 700; background: linear-gradient(135deg, #f0883e, #f6a85b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .register-screen .sub { color: #8b949e; font-size: 0.95rem; margin-top: -8px; }
+        .user-list { width: 100%; max-width: 480px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 6px 0; }
+        .user-tag {
+            background: #21262d; border-radius: 40px; padding: 6px 16px 6px 20px;
+            display: flex; align-items: center; gap: 10px; font-size: 0.95rem;
+            border: 1px solid #30363d; transition: 0.2s;
+        }
+        .user-tag:hover { border-color: #f0883e; }
+        .user-tag .name { cursor: pointer; }
+        .user-tag .name:hover { color: #f6a85b; }
+        .user-tag .del-btn {
+            background: transparent; border: none; color: #8b949e; cursor: pointer;
+            font-size: 1.1rem; line-height: 1; padding: 0 4px;
+        }
+        .user-tag .del-btn:hover { color: #f0883e; }
+        .register-screen .input-group { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        .register-screen input {
+            background: #0d1117; border: 1px solid #30363d; border-radius: 40px;
+            padding: 14px 24px; font-size: 1.1rem; color: #e6edf3; width: 260px; outline: none;
+        }
+        .register-screen input:focus { border-color: #f0883e; box-shadow: 0 0 0 3px rgba(240, 136, 62, 0.25); }
+        .register-screen button {
+            background: #f0883e; border: none; border-radius: 40px;
+            padding: 14px 36px; font-size: 1.1rem; font-weight: 600;
+            color: #0d1117; cursor: pointer; transition: 0.2s;
+        }
+        .register-screen button:hover { background: #f6a85b; transform: scale(1.02); }
+        .register-screen .hint { color: #484f58; font-size: 0.8rem; margin-top: -6px; }
+
+        .game-screen { display: none; flex-direction: column; gap: 18px; }
+        .game-screen.active { display: flex; }
+        .topbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 12px; border-bottom: 1px solid #30363d;
+        }
+        .topbar .user { display: flex; align-items: center; gap: 12px; font-size: 1.15rem; }
+        .topbar .user .avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: #f0883e; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 1.2rem; color: #0d1117;
+        }
+        .topbar .logout-btn {
+            background: transparent; border: 1px solid #30363d; border-radius: 30px;
+            padding: 6px 18px; color: #8b949e; cursor: pointer;
+        }
+        .topbar .logout-btn:hover { border-color: #f0883e; color: #f0883e; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+            gap: 14px; background: #0d1117; border-radius: 16px;
+            padding: 18px 20px; border: 1px solid #30363d;
+        }
+        .stat-item .label { font-size: 0.7rem; color: #8b949e; text-transform: uppercase; }
+        .stat-item .value { font-size: 1.3rem; font-weight: 600; }
+        .stat-item .value.gold { color: #f6a85b; }
+        .stat-item .value.green { color: #7ee787; }
+        .stat-item .value.cyan { color: #79c0ff; }
+        .stat-item .value.purple { color: #d2a8ff; }
+
+        .section-title { font-size: 1.2rem; font-weight: 600; margin: 8px 0 4px; display: flex; align-items: center; gap: 10px; }
+        .section-title small { font-weight: 400; font-size: 0.8rem; color: #8b949e; }
+
+        .table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid #30363d; background: #0d1117; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.92rem; min-width: 600px; }
+        th { text-align: left; padding: 12px 14px; background: #161b22; color: #8b949e; font-weight: 500; font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid #30363d; }
+        td { padding: 10px 14px; border-bottom: 1px solid #21262d; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        .factor-name { font-weight: 500; display: flex; align-items: center; gap: 6px; }
+        .factor-name .badge { font-size: 0.6rem; background: #30363d; padding: 2px 8px; border-radius: 30px; color: #8b949e; }
+        .factor-name .badge.unlocked { background: #1f3a2a; color: #7ee787; }
+        .factor-name .badge.locked { background: #3d1f1f; color: #f0883e; }
+        .factor-mult, .factor-invest { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+        .action-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .action-cell input { width: 80px; background: #0d1117; border: 1px solid #30363d; border-radius: 30px; padding: 6px 12px; color: #e6edf3; font-size: 0.85rem; outline: none; }
+        .action-cell input:focus { border-color: #f0883e; }
+        .action-cell input::placeholder { color: #484f58; font-size: 0.7rem; }
+        .btn { border: none; border-radius: 30px; padding: 6px 16px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .btn-primary { background: #f0883e; color: #0d1117; }
+        .btn-primary:hover { background: #f6a85b; }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-unlock { background: #1f6f3a; color: #e6edf3; }
+        .btn-unlock:hover { background: #2d8f4a; }
+        .btn-unlock:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-upgrade { background: #1f6f3a; color: #e6edf3; padding: 10px 28px; font-size: 1rem; border-radius: 40px; }
+        .btn-upgrade:hover { background: #2d8f4a; }
+        .btn-upgrade:disabled { opacity: 0.4; cursor: not-allowed; }
+        .upgrade-area {
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+            gap: 14px; background: #0d1117; border-radius: 16px;
+            padding: 14px 20px; border: 1px solid #30363d; margin-top: 4px;
+        }
+        .upgrade-area .info .cost { color: #8b949e; font-size: 0.9rem; }
+        .upgrade-area .info .cost strong { color: #f6a85b; }
+        .empty-tip { color: #484f58; text-align: center; padding: 30px 10px; font-size: 0.95rem; }
+
+        @media (max-width: 700px) { .app { padding: 16px 14px; } .stats-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 480px) { .user-tag { font-size: 0.8rem; padding: 4px 12px; } }
+    </style>
+</head>
+<body>
+    <div class="app" id="app">
+        <!-- ===== 注册界面 ===== -->
+        <div class="register-screen" id="registerScreen">
+            <h1>🧬 因素大师</h1>
+            <p class="sub">选择已有用户或创建新账号</p>
+            <!-- 用户列表 -->
+            <div class="user-list" id="userList"></div>
+            <div class="input-group">
+                <input type="text" id="usernameInput" placeholder="输入用户名..." maxlength="20" autofocus />
+                <button id="registerBtn">🚀 开始 / 切换</button>
+            </div>
+            <div class="hint">无需密码 · 数据保存在本地</div>
+        </div>
+
+        <!-- ===== 游戏主界面 ===== -->
+        <div class="game-screen" id="gameScreen">
+            <!-- 顶栏 -->
+            <div class="topbar">
+                <div class="user">
+                    <div class="avatar" id="avatarLetter">U</div>
+                    <span id="displayUsername">用户</span>
+                </div>
+                <button class="logout-btn" id="logoutBtn">🚪 切换账号</button>
+            </div>
+
+            <!-- 统计 -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-item"><span class="label">⭐ 等级</span><span class="value cyan" id="levelDisplay">0</span></div>
+                <div class="stat-item"><span class="label">🔢 幂指数</span><span class="value" id="powerDisplay">1.00</span></div>
+                <div class="stat-item"><span class="label">📊 总倍率</span><span class="value gold" id="totalMultDisplay">1.00</span></div>
+                <div class="stat-item"><span class="label">💎 因素点</span><span class="value gold" id="pointsDisplay">0</span></div>
+                <div class="stat-item"><span class="label">⚡ 每秒获取</span><span class="value green" id="perSecDisplay">1.00</span></div>
+                <div class="stat-item"><span class="label">⏱️ 游玩时长</span><span class="value purple" id="timeDisplay">00:00:00</span></div>
+            </div>
+
+            <!-- 因子表格 -->
+            <div class="section-title">📋 因子列表 <small>投入因素点提升倍率</small></div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th style="width:15%;">因子</th><th style="width:22%;">单因素点倍率</th><th style="width:22%;">已投入</th><th style="width:41%;">操作</th></tr></thead>
+                    <tbody id="factorTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- 升级区域 -->
+            <div class="upgrade-area">
+                <div class="info">
+                    <span style="font-weight:600;">⬆ 升级</span>
+                    <span class="cost">需要 <strong id="upgradeCostDisplay">10</strong> 因素点</span>
+                    <span style="color:#484f58;font-size:0.8rem;" id="upgradeNextInfo">下一级: 1 → 幂指数 1.10</span>
+                </div>
+                <button class="btn btn-upgrade" id="upgradeBtn">⬆ 升级</button>
+            </div>
+            <div style="text-align:center;color:#484f58;font-size:0.7rem;margin-top:12px;border-top:1px solid #21262d;padding-top:14px;">
+                数据自动保存 · 关闭页面后进度保留
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================================================================
+        // 因素大师 · 多用户 + 游玩时长
+        // ================================================================
+
+        // ---------- 工具函数 ----------
+        const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71];
+        function getPrime(index) {
+            if (index <= PRIMES.length) return PRIMES[index - 1];
+            let last = PRIMES[PRIMES.length - 1], count = PRIMES.length;
+            while (count < index) {
+                last += 2; let isPrime = true;
+                for (let p of PRIMES) { if (p * p > last) break; if (last % p === 0) { isPrime = false; break; } }
+                if (isPrime) { PRIMES.push(last); count++; }
+            }
+            return PRIMES[index - 1];
+        }
+        function formatNum(n) {
+            if (!isFinite(n)) return '∞';
+            if (n === 0) return '0';
+            const abs = Math.abs(n);
+            if (abs < 1e-6) return n.toExponential(4);
+            if (abs < 1e4) return n.toFixed(4);
+            if (abs < 1e15) return n.toFixed(2);
+            return n.toExponential(4);
+        }
+        function parseNumInput(str) {
+            str = str.trim().replace(/,/g, '');
+            if (str === '') return NaN;
+            return Number(str);
+        }
+        function formatDuration(seconds) {
+            if (!seconds || seconds < 0) seconds = 0;
+            seconds = Math.floor(seconds);
+            const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+            const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        // ---------- 常量 ----------
+        const MAX_FACTORS = 15;
+        const STORAGE_KEY = 'factorMasterUsers';
+
+        // ---------- 用户数据管理 ----------
+        function getDefaultUserData(username) {
+            return {
+                username: username,
+                level: 0,
+                points: 0,
+                factors: Array.from({ length: MAX_FACTORS }, (_, i) => ({
+                    id: i + 1,
+                    unlocked: i === 0,
+                    invested: 0,
+                })),
+                lastSave: Date.now(),
+                totalSeconds: 0, // 累计游玩秒数
+            };
+        }
+
+        function loadAllUsers() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const obj = JSON.parse(raw);
+                    if (typeof obj === 'object' && obj !== null) {
+                        // 确保每个用户的数据完整
+                        for (const [name, data] of Object.entries(obj)) {
+                            if (!data.factors || !Array.isArray(data.factors)) {
+                                obj[name] = getDefaultUserData(name);
+                            } else {
+                                while (data.factors.length < MAX_FACTORS) {
+                                    const nextId = data.factors.length + 1;
+                                    data.factors.push({ id: nextId, unlocked: nextId === 1, invested: 0 });
+                                }
+                                data.factors.forEach((f, idx) => {
+                                    if (!f.id) f.id = idx + 1;
+                                    if (f.unlocked === undefined) f.unlocked = (idx === 0);
+                                    if (f.invested === undefined) f.invested = 0;
+                                });
+                                if (data.level === undefined) data.level = 0;
+                                if (data.points === undefined) data.points = 0;
+                                if (data.lastSave === undefined) data.lastSave = Date.now();
+                                if (data.totalSeconds === undefined) data.totalSeconds = 0;
+                            }
+                        }
+                        return obj;
+                    }
+                }
+            } catch (e) { /* ignore */ }
+            return {};
+        }
+
+        function saveAllUsers(usersObj) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(usersObj));
+            } catch (e) { /* ignore */ }
+        }
+
+        function getUserData(username) {
+            const all = loadAllUsers();
+            return all[username] || null;
+        }
+
+        function saveUserData(username, data) {
+            const all = loadAllUsers();
+            all[username] = data;
+            saveAllUsers(all);
+        }
+
+        function deleteUserData(username) {
+            const all = loadAllUsers();
+            delete all[username];
+            saveAllUsers(all);
+        }
+
+        function getAllUsernames() {
+            const all = loadAllUsers();
+            return Object.keys(all);
+        }
+
+        // ---------- 当前游戏状态 ----------
+        let currentUser = null;           // 当前用户名
+        let state = null;                // 当前用户的数据对象（引用）
+        let gameLoopInterval = null;
+        let saveInterval = null;
+
+        // ---------- 核心计算（使用state） ----------
+        function getFactorMultiplier(factorId, invested) {
+            if (invested <= 0) return 1;
+            const a = factorId;
+            const p = getPrime(a);
+            const val = invested * Math.pow(10, -a + 1);
+            if (val <= 1) return 1;
+            const mult = Math.log(val) / Math.log(p);
+            return Math.max(1, mult);
+        }
+
+        function getTotalMultiplier() {
+            let total = 1;
+            for (const f of state.factors) {
+                if (!f.unlocked) continue;
+                total *= getFactorMultiplier(f.id, f.invested);
+            }
+            return total;
+        }
+
+        function getFinalMultiplier() {
+            return Math.pow(getTotalMultiplier(), 1 + 0.1 * state.level);
+        }
+
+        function getPointsPerSecond() { return getFinalMultiplier(); }
+
+        function getUpgradeCost() {
+            const m = state.level;
+            const exp = Math.pow(2, m);
+            if (exp > 308) return Infinity;
+            return Math.pow(10, exp);
+        }
+        function getUnlockCost(factorId) { return Math.pow(20, factorId); }
+
+        // ---------- 游戏操作 ----------
+        function investPoints(factorId, amount) {
+            const f = state.factors.find(f => f.id === factorId);
+            if (!f || !f.unlocked || amount <= 0 || state.points < amount) return false;
+            state.points -= amount;
+            f.invested += amount;
+            return true;
+        }
+        function unlockFactor(factorId) {
+            const f = state.factors.find(f => f.id === factorId);
+            if (!f || f.unlocked) return false;
+            const cost = getUnlockCost(factorId);
+            if (state.points < cost) return false;
+            state.points -= cost;
+            f.unlocked = true;
+            return true;
+        }
+        function upgradeLevel() {
+            const cost = getUpgradeCost();
+            if (!isFinite(cost) || state.points < cost) return false;
+            state.points -= cost;
+            state.level += 1;
+            return true;
+        }
+
+        // ---------- 离线时长更新 ----------
+        function applyOfflineTime() {
+            if (!state) return;
+            const now = Date.now();
+            const elapsed = (now - state.lastSave) / 1000; // 秒
+            if (elapsed > 1) {
+                // 离线期间也产生因素点
+                const pps = getPointsPerSecond();
+                state.points += pps * elapsed;
+                // 累计时长
+                state.totalSeconds += elapsed;
+            }
+            state.lastSave = now;
+        }
+
+        // ---------- 增量渲染 ----------
+        function renderStats() {
+            if (!state) return;
+            document.getElementById('levelDisplay').textContent = state.level;
+            document.getElementById('powerDisplay').textContent = (1 + 0.1 * state.level).toFixed(4);
+            document.getElementById('totalMultDisplay').textContent = formatNum(getTotalMultiplier());
+            document.getElementById('pointsDisplay').textContent = formatNum(state.points);
+            document.getElementById('perSecDisplay').textContent = formatNum(getPointsPerSecond());
+            document.getElementById('timeDisplay').textContent = formatDuration(state.totalSeconds || 0);
+
+            const cost = getUpgradeCost();
+            document.getElementById('upgradeCostDisplay').textContent = isFinite(cost) ? formatNum(cost) : '∞';
+            const nextPower = 1 + 0.1 * (state.level + 1);
+            document.getElementById('upgradeNextInfo').textContent =
+                `下一级: ${state.level} → ${state.level+1}  ·  幂指数 ${nextPower.toFixed(4)}`;
+            document.getElementById('upgradeBtn').disabled = !isFinite(cost) || state.points < cost;
+        }
+
+        function renderFactors() {
+            const tbody = document.getElementById('factorTableBody');
+            if (!state) return;
+
+            for (const f of state.factors) {
+                const rowId = `factor-row-${f.id}`;
+                let row = document.getElementById(rowId);
+                if (!row) {
+                    row = document.createElement('tr');
+                    row.id = rowId;
+                    row.innerHTML = `
+                        <td class="factor-name-cell"></td>
+                        <td class="factor-mult"></td>
+                        <td class="factor-invest"></td>
+                        <td class="action-cell"></td>
+                    `;
+                    tbody.appendChild(row);
+                }
+                updateFactorRow(row, f);
+            }
+        }
+
+        function updateFactorRow(row, f) {
+            const id = f.id;
+            const unlocked = f.unlocked;
+            const invested = f.invested;
+            const mult = unlocked ? getFactorMultiplier(id, invested) : 1;
+
+            const nameCell = row.querySelector('.factor-name-cell');
+            let nameHtml = `<span class="factor-name">因子${id}`;
+            if (unlocked) {
+                nameHtml += ` <span class="badge unlocked">✓</span>`;
+            } else {
+                nameHtml += ` <span class="badge locked">🔒</span>`;
+            }
+            nameHtml += `</span>`;
+            nameCell.innerHTML = nameHtml;
+
+            const multCell = row.querySelector('.factor-mult');
+            multCell.textContent = formatNum(mult);
+
+            const investCell = row.querySelector('.factor-invest');
+            investCell.textContent = formatNum(invested);
+
+            const actionCell = row.querySelector('.action-cell');
+
+            if (unlocked) {
+                // 移除可能残留的解锁按钮
+                const oldUnlock = actionCell.querySelector('.unlock-btn');
+                if (oldUnlock) oldUnlock.remove();
+
+                let input = actionCell.querySelector('.invest-input');
+                let btn = actionCell.querySelector('.invest-btn');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'invest-input';
+                    input.placeholder = '数量';
+                    input.dataset.factor = id;
+                    actionCell.appendChild(input);
+                }
+                if (!btn) {
+                    btn = document.createElement('button');
+                    btn.className = 'btn btn-primary invest-btn';
+                    btn.dataset.factor = id;
+                    btn.textContent = '投入';
+                    actionCell.appendChild(btn);
+                }
+                btn.disabled = state.points <= 0;
+            } else {
+                const oldInput = actionCell.querySelector('.invest-input');
+                const oldBtn = actionCell.querySelector('.invest-btn');
+                if (oldInput) oldInput.remove();
+                if (oldBtn) oldBtn.remove();
+
+                let unlockBtn = actionCell.querySelector('.unlock-btn');
+                if (!unlockBtn) {
+                    unlockBtn = document.createElement('button');
+                    unlockBtn.className = 'btn btn-unlock unlock-btn';
+                    unlockBtn.dataset.factor = id;
+                    actionCell.appendChild(unlockBtn);
+                }
+                const cost = getUnlockCost(id);
+                const canAfford = state.points >= cost;
+                unlockBtn.textContent = `🔓 解锁 (${formatNum(cost)})`;
+                unlockBtn.disabled = !canAfford;
+            }
+        }
+
+        function renderAll() {
+            if (!state) return;
+            renderStats();
+            renderFactors();
+            document.getElementById('displayUsername').textContent = currentUser || '玩家';
+            document.getElementById('avatarLetter').textContent = (currentUser || 'U')[0].toUpperCase();
+            // 保存当前用户数据
+            saveUserData(currentUser, state);
+        }
+
+        // ---------- 事件委托 ----------
+        function setupEventDelegation() {
+            const tbody = document.getElementById('factorTableBody');
+
+            tbody.addEventListener('click', function(e) {
+                const btn = e.target.closest('.invest-btn');
+                if (btn) {
+                    const factorId = parseInt(btn.dataset.factor);
+                    const row = btn.closest('tr');
+                    const input = row.querySelector('.invest-input');
+                    if (!input) return;
+                    const raw = input.value.trim();
+                    if (raw === '') return;
+                    const amount = parseNumInput(raw);
+                    if (isNaN(amount) || amount <= 0) return;
+                    if (investPoints(factorId, amount)) {
+                        input.value = '';
+                        renderAll();
+                    } else {
+                        btn.style.opacity = '0.6';
+                        setTimeout(() => btn.style.opacity = '1', 300);
+                    }
+                }
+
+                const unlockBtn = e.target.closest('.unlock-btn');
+                if (unlockBtn) {
+                    const factorId = parseInt(unlockBtn.dataset.factor);
+                    if (unlockFactor(factorId)) {
+                        renderAll();
+                    } else {
+                        unlockBtn.style.opacity = '0.5';
+                        setTimeout(() => unlockBtn.style.opacity = '1', 300);
+                    }
+                }
+            });
+
+            tbody.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const input = e.target.closest('.invest-input');
+                    if (input) {
+                        const row = input.closest('tr');
+                        const btn = row.querySelector('.invest-btn');
+                        if (btn) btn.click();
+                    }
+                }
+            });
+        }
+
+        // ---------- 游戏循环 ----------
+        function gameLoop() {
+            if (!state) return;
+            // 每秒增加点数
+            const pps = getPointsPerSecond();
+            state.points += pps;
+            // 每秒增加时长
+            state.totalSeconds = (state.totalSeconds || 0) + 1;
+            renderAll(); // 内部会保存
+        }
+
+        // ---------- 用户登录 / 登出 ----------
+        function loginUser(username) {
+            if (!username || username.trim() === '') { alert('请输入用户名'); return; }
+            username = username.trim().slice(0, 20);
+
+            // 加载所有用户数据
+            const all = loadAllUsers();
+            let userData = all[username];
+            if (!userData) {
+                // 创建新用户
+                userData = getDefaultUserData(username);
+                all[username] = userData;
+                saveAllUsers(all);
+            }
+            // 应用离线时间（更新lastSave和totalSeconds、点数）
+            currentUser = username;
+            state = userData;
+            applyOfflineTime(); // 计算离线收益和时长
+            // 保存更新后的数据
+            saveUserData(username, state);
+
+            // 切换界面
+            document.getElementById('registerScreen').style.display = 'none';
+            document.getElementById('gameScreen').classList.add('active');
+
+            // 渲染
+            renderAll();
+
+            // 启动循环
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            gameLoopInterval = setInterval(gameLoop, 1000);
+            if (saveInterval) clearInterval(saveInterval);
+            saveInterval = setInterval(() => {
+                if (state) saveUserData(currentUser, state);
+            }, 5000);
+        }
+
+        function logout() {
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            if (saveInterval) clearInterval(saveInterval);
+            gameLoopInterval = null;
+            saveInterval = null;
+            if (state && currentUser) {
+                saveUserData(currentUser, state);
+            }
+            currentUser = null;
+            state = null;
+            document.getElementById('gameScreen').classList.remove('active');
+            document.getElementById('registerScreen').style.display = 'flex';
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('usernameInput').focus();
+            // 刷新用户列表
+            renderUserList();
+        }
+
+        // ---------- 用户列表渲染 ----------
+        function renderUserList() {
+            const container = document.getElementById('userList');
+            const users = getAllUsernames();
+            if (users.length === 0) {
+                container.innerHTML = '<span style="color:#484f58;font-size:0.9rem;">暂无用户，创建第一个吧 🚀</span>';
+                return;
+            }
+            let html = '';
+            for (const name of users) {
+                html += `
+                    <div class="user-tag">
+                        <span class="name" data-username="${name}">${name}</span>
+                        <button class="del-btn" data-username="${name}" title="删除用户">✕</button>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+
+            // 绑定事件：点击用户名登录
+            container.querySelectorAll('.name').forEach(el => {
+                el.addEventListener('click', function() {
+                    const uname = this.dataset.username;
+                    // 如果当前已登录，先登出（但会保存当前）
+                    if (currentUser) {
+                        logout(); // 会清理并回到注册界面
+                        // 然后延迟登录新用户（因为logout会刷新列表，但不会阻止）
+                        setTimeout(() => {
+                            loginUser(uname);
+                        }, 50);
+                    } else {
+                        loginUser(uname);
+                    }
+                });
+            });
+
+            // 删除按钮
+            container.querySelectorAll('.del-btn').forEach(el => {
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const uname = this.dataset.username;
+                    if (currentUser === uname) {
+                        alert('不能删除当前登录的用户，请先切换账号。');
+                        return;
+                    }
+                    if (confirm(`确定要删除用户 “${uname}” 吗？此操作不可恢复！`)) {
+                        deleteUserData(uname);
+                        renderUserList();
+                    }
+                });
+            });
+        }
+
+        // ---------- 初始化 ----------
+        function init() {
+            // 注册按钮
+            document.getElementById('registerBtn').addEventListener('click', function() {
+                const inp = document.getElementById('usernameInput');
+                const name = inp.value.trim();
+                if (!name) { alert('请输入用户名'); return; }
+                // 如果当前已登录，先登出
+                if (currentUser) logout();
+                loginUser(name);
+            });
+            document.getElementById('usernameInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') document.getElementById('registerBtn').click();
+            });
+
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+
+            document.getElementById('upgradeBtn').addEventListener('click', function() {
+                if (upgradeLevel()) renderAll();
+                else { this.style.opacity = '0.5'; setTimeout(() => this.style.opacity = '1', 300); }
+            });
+
+            setupEventDelegation();
+
+            // 初始渲染用户列表
+            renderUserList();
+
+            // 检查是否有已保存的当前用户？不，我们要求手动登录。
+            // 但如果有之前未登出的用户，可以尝试自动登录？
+            // 为了简单，不自动登录，用户自行选择。
+            // 但如果只有一个用户，可以自动登录？
+            const users = getAllUsernames();
+            if (users.length === 1) {
+                // 只有一个用户，可自动登录
+                loginUser(users[0]);
+            } else {
+                document.getElementById('registerScreen').style.display = 'flex';
+                document.getElementById('gameScreen').classList.remove('active');
+                document.getElementById('usernameInput').focus();
+            }
+
+            window.addEventListener('beforeunload', function() {
+                if (state && currentUser) {
+                    saveUserData(currentUser, state);
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
